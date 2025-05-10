@@ -32,7 +32,7 @@ frame_placeholder = st.empty()
 table_placeholder = st.empty()
 
 if st.session_state.running:
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture("dataset/my/490313789_1165045711974137_9051293052811004047_n.jpeg")  
     
     while st.session_state.running:
         ret, frame = cap.read()

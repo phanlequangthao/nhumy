@@ -7,12 +7,13 @@ import mediapipe as mp
 import pickle
 from student import Student
 import math
+import face_recognition
 
 # Khởi tạo MediaPipe face detection và face mesh
 mp_face_detection = mp.solutions.face_detection
 mp_face_mesh = mp.solutions.face_mesh
 face_detection = mp_face_detection.FaceDetection(min_detection_confidence=0.5)
-face_mesh = mp_face_mesh.FaceMesh(static_image_mode=False, max_num_faces=1, refine_landmarks=True)
+face_mesh = mp_face_mesh.FaceMesh(static_image_mode=False, max_num_faces=10, refine_landmarks=True)
 
 # Các tham số cho việc đánh giá trạng thái
 LOOK_DOWN_THRESHOLD = 0.22  # Ngưỡng cho việc cúi xuống (khoảng cách dọc mặt)
@@ -169,6 +170,22 @@ def calculate_iou(box1, box2):
     
     return intersection / float(box1_area + box2_area - intersection)
 
+def get_face_encoding(face_image):
+    # Chuyển đổi ảnh sang RGB
+    rgb_image = cv2.cvtColor(face_image, cv2.COLOR_BGR2RGB)
+    # Tìm khuôn mặt và tính encoding
+    face_locations = face_recognition.face_locations(rgb_image)
+    if face_locations:
+        face_encodings = face_recognition.face_encodings(rgb_image, face_locations)
+        if face_encodings:
+            return face_encodings[0]
+    return None
+
+def compare_faces(face_encoding1, face_encoding2):
+    if face_encoding1 is None or face_encoding2 is None:
+        return float('inf')
+    return face_recognition.face_distance([face_encoding1], face_encoding2)[0]
+
 # Xử lý 1 frame hình ảnh
 def process_frame(frame):
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -177,7 +194,11 @@ def process_frame(frame):
     students = load_students()
 
     if results.detections:
-        for detection in results.detections:
+        # Sắp xếp các detection theo vị trí từ trái sang phải
+        detections = sorted(results.detections, 
+                          key=lambda x: x.location_data.relative_bounding_box.xmin)
+        
+        for detection in detections:
             bbox = detection.location_data.relative_bounding_box
             h, w, _ = frame.shape
             x1 = int(bbox.xmin * w)
@@ -185,10 +206,21 @@ def process_frame(frame):
             x2 = int((bbox.xmin + bbox.width) * w)
             y2 = int((bbox.ymin + bbox.height) * h)
             
+            # Đảm bảo tọa độ không âm
+            x1 = max(0, x1)
+            y1 = max(0, y1)
+            x2 = min(w, x2)
+            y2 = min(h, y2)
+            
             face_crop = frame[y1:y2, x1:x2]
             if face_crop.size == 0:
                 continue
                 
+            # Lấy face encoding của khuôn mặt hiện tại
+            current_face_encoding = get_face_encoding(face_crop)
+            if current_face_encoding is None:
+                continue
+
             face_rgb = cv2.cvtColor(face_crop, cv2.COLOR_BGR2RGB)
             mesh_results = face_mesh.process(face_rgb)
             
@@ -198,7 +230,7 @@ def process_frame(frame):
             
             for student in students.values():
                 for encoding in student.face_encodings:
-                    distance = calculate_iou(bbox, encoding)
+                    distance = compare_faces(current_face_encoding, encoding)
                     if distance < best_distance:
                         best_distance = distance
                         best_match = student

@@ -12,7 +12,7 @@ import face_recognition
 # Khởi tạo MediaPipe face detection và face mesh
 mp_face_detection = mp.solutions.face_detection
 mp_face_mesh = mp.solutions.face_mesh
-face_detection = mp_face_detection.FaceDetection(min_detection_confidence=0.5)
+face_detection = mp_face_detection.FaceDetection(min_detection_confidence=0.2)
 face_mesh = mp_face_mesh.FaceMesh(static_image_mode=False, max_num_faces=10, refine_landmarks=True)
 
 # Các tham số cho việc đánh giá trạng thái

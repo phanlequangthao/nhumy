@@ -7,7 +7,7 @@ from student import Student
 
 # Khởi tạo MediaPipe face detection
 mp_face_detection = mp.solutions.face_detection
-face_detection = mp_face_detection.FaceDetection(min_detection_confidence=0.5)
+face_detection = mp_face_detection.FaceDetection(min_detection_confidence=0.2)
 
 # Load hoặc tạo mới danh sách học sinh
 def load_students():
@@ -91,6 +91,16 @@ def train_student(name, video_paths):
     return student
 
 if __name__ == "__main__":
+    nam_video_paths = [
+        "dataset/nam/nam.mp4"
+    ]
+    train_student("nam", nam_video_paths)
+
+    linh_video_paths = [
+        "dataset/gialinh/glinh.mp4"
+    ]
+    train_student("linh", linh_video_paths)
+
     # Huấn luyện cho my
     my_video_paths = [
         "dataset/my/v1.mp4"
